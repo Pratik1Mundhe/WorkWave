@@ -3,37 +3,54 @@ from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-import logging
+from django.shortcuts import HttpResponse
+from oauth2_provider.decorators import protected_resource
+from rest_framework.permissions import IsAuthenticated
 
-logger = logging.getLogger(__name__)
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
+from rest_framework import serializers
 
-@csrf_exempt
+class MySerializer(serializers.Serializer):
+    my_field = serializers.CharField()
+
+@swagger_auto_schema(
+    operation_description="Custom description for this endpoint",
+    request_body=MySerializer,
+    responses={200: MySerializer},
+    method='post'
+)
+
+
 @api_view(['POST'])
 @authentication_classes([])
-@permission_classes([AllowAny])
 def login(request):
-    logger.info("Login endpoint accessed")
-    logger.info(f"Request headers: {request.headers}")
-    logger.info(f"Request method: {request.method}")
-    return Response({"status": "ok"})
-
-@csrf_exempt
-def logout(request):
     body = json.loads(request.body)
     user_name = body["user_name"]
     password = body["password"]
-    # interactor = PlayerInteractor(
-    #     storage=StorageImplementation(),
-    #     presenter=PresenterImplementation()
-    # )
+    return HttpResponse(f"user_name: {user_name}")
 
-    # try:
-    #     response = interactor.create_player(
-    #         user_name=user_name,
-    #         password=password
-    #     )
-    # except Exception as err:
-    #     return HttpResponse(f"error: {str(err)}")
+# ###
+# for user to login
+# FE will make request to o/authorize/ with username password clientid and cliend_secret as grant type is resource owner
+# and get the access token 
+# needs to be saved as cookies
+# for making request to other protected apis 
+# ###
 
-    return HttpResponse("Username: ", user_name, " Password: ", password)
+@swagger_auto_schema(
+    operation_description="Custom description for this endpoint",
+    request_body=MySerializer,
+    responses={200: MySerializer},
+    method='post'
+)
+
+@api_view(['POST'])
+# @permission_classes([IsAuthenticated])
+def logout(request):
+    token = request.auth
+    if token:
+        token.revoke()
+    return Response({"status": "logged out"})
+
 
